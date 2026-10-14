@@ -48,3 +48,19 @@ This project uses an ESP32-S3 AI camera module to create a portable Topgolf-styl
 * [ESPConnect](https://thelastoutpostworkshop.github.io/ESPConnect)  is a browser-based toolkit for ESP32 devices. It brings common maintenance tasks together so you can connect, inspect and update your board without installing desktop utilities.
   * Video overview: [ESPConnect: The Browser Tool Every ESP32 Developer Needs to Know About
 ](https://www.youtube.com/watch?v=YUSDPqDLyX8&t=832s)
+
+## Waveshare ESP32-S3 Camera
+
+The team has decided to use the Waveshare ESP32-S3 Camera
+
+ESP32-S3 AIoT Camera Development Board, Integrated Audio Input And Output Module, Supports Connecting External Display, Image Capture & Recognition And AI Speech Interaction Support
+
+- Part No.: **ESP32-S3-CAM-OV5640**
+- Brand: **Waveshare**
+- SKU: 33699
+
+### Resources
+* [Technical Reference](https://docs.waveshare.com/ESP32-S3-CAM-OVxxxx?variant=ESP32-S3-CAM-OV5640)
+* [Github](https://github.com/waveshareteam/ESP32-S3-CAM-OVxxxx)
+* [Online Waveshare order page](https://www.waveshare.com/esp32-s3-cam-ov5640.htm?sku=33699)
+* [Amazon product page](https://www.amazon.com/dp/B0GS1HT4LH)
