@@ -67,3 +67,8 @@ vcpkg_installed/
 # test output & cache
 Testing/
 .cache/
+
+####################### Firmware #######################
+firmware/ai-golf-camera/.gitignore
+firmware/ai-golf-camera/pio
+firmware/ai-golf-camera/.vscode
