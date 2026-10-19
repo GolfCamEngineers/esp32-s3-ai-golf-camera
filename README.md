@@ -60,7 +60,8 @@ ESP32-S3 AIoT Camera Development Board, Integrated Audio Input And Output Module
 - SKU: 33699
 
 ### Resources
-* [Technical Reference](https://docs.waveshare.com/ESP32-S3-CAM-OVxxxx?variant=ESP32-S3-CAM-OV5640)
-* [Github](https://github.com/waveshareteam/ESP32-S3-CAM-OVxxxx)
+* [Waveshare Technical Reference](https://docs.waveshare.com/ESP32-S3-CAM-OVxxxx?variant=ESP32-S3-CAM-OV5640)
+* [Waveshare Github](https://github.com/waveshareteam/ESP32-S3-CAM-OVxxxx)
+  * [02_CameraWebServer](https://github.com/waveshareteam/ESP32-S3-CAM-OVxxxx/tree/main/examples/Arduino-v3.2.0/examples/02_CameraWebServer) example
 * [Online Waveshare order page](https://www.waveshare.com/esp32-s3-cam-ov5640.htm?sku=33699)
 * [Amazon product page](https://www.amazon.com/dp/B0GS1HT4LH)
