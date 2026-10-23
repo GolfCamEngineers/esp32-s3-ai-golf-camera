@@ -1,6 +1,8 @@
 #include <WiFi.h>
 #include <WebServer.h>
 
+#define DEBUG true
+
 WebServer server(80);
 
 void handleRoot()
@@ -45,6 +47,7 @@ void handleNotFound()
   server.send(404, "text/plain", "404: Not Found");
 }
 
+int loopCount = 0;
 void setup()
 {
   Serial.begin(115200);
@@ -60,10 +63,10 @@ void setup()
   
   // Start the server
   server.begin();
-  Serial.println("HTTP server started");
-  
+  Serial.println("HTTP server started at " + WiFi.softAPIP().toString());
+
   // Connect to the ESP32-NW WiFi network on your phone with the password provided
-  // In a browser, navigate to 192.186.4.1
+  // In a browser, navigate to IP in serial output messages
   // Open a serial connection to the board (Serial Monitor in the upper right hand
   //  corner of this window, the icon looks like a plug)
 }
@@ -72,4 +75,10 @@ void loop()
 {
   server.handleClient();
   delay(2);
+  
+  if (DEBUG) {
+    delay(1000); 
+    Serial.print(WiFi.softAPIP());
+    Serial.println(" Looping..." + String(loopCount++));
+  }
 }
