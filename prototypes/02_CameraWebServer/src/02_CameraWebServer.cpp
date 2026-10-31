@@ -7,11 +7,7 @@
 #include "board_config.h"
 #include "io_extension.h"
 
-// ===========================
-// Enter your WiFi credentials
-// ===========================
-const char *ssid = "WSTEST";
-const char *password = "waveshare0755";
+#include "WiFiCredentials.h"
 
 void startCameraServer();
 void setupLedFlash();
@@ -103,7 +99,12 @@ void setup() {
   Serial.println("' to connect");
 }
 
+int loopCount = 0;
+
 void loop() {
   // Do nothing. Everything is done in another task by the web server
   delay(10000);
+
+  Serial.print(WiFi.localIP());
+  Serial.println(" Looping..." + String(loopCount++));  
 }
