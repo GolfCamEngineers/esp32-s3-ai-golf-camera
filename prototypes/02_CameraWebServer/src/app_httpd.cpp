@@ -20,6 +20,10 @@
 #include "sdkconfig.h"
 #include "camera_index.h"
 #include "board_config.h"
+#include "camera_settings.h"
+#include "camera_settings_ui.h"
+#include <errno.h>
+#include <limits.h>
 
 #if defined(ARDUINO_ARCH_ESP32) && defined(CONFIG_ARDUHAL_ESP_LOG)
 #include "esp32-hal-log.h"
@@ -333,78 +337,28 @@ static esp_err_t cmd_handler(httpd_req_t *req) {
   }
   free(buf);
 
-  int val = atoi(value);
-  log_i("%s = %d", variable, val);
-  sensor_t *s = esp_camera_sensor_get();
-  int res = 0;
-
-  if (!strcmp(variable, "framesize")) {
-    if (s->pixformat == PIXFORMAT_JPEG) {
-      res = s->set_framesize(s, (framesize_t)val);
-    }
-  } else if (!strcmp(variable, "quality")) {
-    res = s->set_quality(s, val);
-  } else if (!strcmp(variable, "contrast")) {
-    res = s->set_contrast(s, val);
-  } else if (!strcmp(variable, "brightness")) {
-    res = s->set_brightness(s, val);
-  } else if (!strcmp(variable, "saturation")) {
-    res = s->set_saturation(s, val);
-  } else if (!strcmp(variable, "gainceiling")) {
-    res = s->set_gainceiling(s, (gainceiling_t)val);
-  } else if (!strcmp(variable, "colorbar")) {
-    res = s->set_colorbar(s, val);
-  } else if (!strcmp(variable, "awb")) {
-    res = s->set_whitebal(s, val);
-  } else if (!strcmp(variable, "agc")) {
-    res = s->set_gain_ctrl(s, val);
-  } else if (!strcmp(variable, "aec")) {
-    res = s->set_exposure_ctrl(s, val);
-  } else if (!strcmp(variable, "hmirror")) {
-    res = s->set_hmirror(s, val);
-  } else if (!strcmp(variable, "vflip")) {
-    res = s->set_vflip(s, val);
-  } else if (!strcmp(variable, "awb_gain")) {
-    res = s->set_awb_gain(s, val);
-  } else if (!strcmp(variable, "agc_gain")) {
-    res = s->set_agc_gain(s, val);
-  } else if (!strcmp(variable, "aec_value")) {
-    res = s->set_aec_value(s, val);
-  } else if (!strcmp(variable, "aec2")) {
-    res = s->set_aec2(s, val);
-  } else if (!strcmp(variable, "dcw")) {
-    res = s->set_dcw(s, val);
-  } else if (!strcmp(variable, "bpc")) {
-    res = s->set_bpc(s, val);
-  } else if (!strcmp(variable, "wpc")) {
-    res = s->set_wpc(s, val);
-  } else if (!strcmp(variable, "raw_gma")) {
-    res = s->set_raw_gma(s, val);
-  } else if (!strcmp(variable, "lenc")) {
-    res = s->set_lenc(s, val);
-  } else if (!strcmp(variable, "special_effect")) {
-    res = s->set_special_effect(s, val);
-  } else if (!strcmp(variable, "wb_mode")) {
-    res = s->set_wb_mode(s, val);
-  } else if (!strcmp(variable, "ae_level")) {
-    res = s->set_ae_level(s, val);
+  char *end = nullptr;
+  errno = 0;
+  long parsed = strtol(value, &end, 10);
+  if (errno || end == value || *end || parsed < INT_MIN || parsed > INT_MAX) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Invalid setting value");
   }
+  int val = static_cast<int>(parsed);
+  esp_err_t result;
 #if defined(LED_GPIO_NUM)
-  else if (!strcmp(variable, "led_intensity")) {
+  if (!strcmp(variable, "led_intensity")) {
     led_duty = val;
-    if (isStreaming) {
-      enable_led(true);
-    }
-  }
+    if (isStreaming) enable_led(true);
+    result = ESP_OK;
+  } else
 #endif
-  else {
-    log_i("Unknown command: %s", variable);
-    res = -1;
+  {
+    result = cameraSettingsSet(variable, val);
   }
-
-  if (res < 0) {
-    return httpd_resp_send_500(req);
+  if (result == ESP_ERR_INVALID_ARG || result == ESP_ERR_NOT_FOUND) {
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Unsupported setting or value. This build supports QVGA (320x240) and smaller.");
   }
+  if (result != ESP_OK) return httpd_resp_send_500(req);
 
   httpd_resp_set_hdr(req, "Access-Control-Allow-Origin", "*");
   return httpd_resp_send(req, NULL, 0);
@@ -415,7 +369,7 @@ static int print_reg(char *p, sensor_t *s, uint16_t reg, uint32_t mask) {
 }
 
 static esp_err_t status_handler(httpd_req_t *req) {
-  static char json_response[1024];
+  static char json_response[2048];
 
   sensor_t *s = esp_camera_sensor_get();
   char *p = json_response;
@@ -458,6 +412,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   p += sprintf(p, "\"contrast\":%d,", s->status.contrast);
   p += sprintf(p, "\"saturation\":%d,", s->status.saturation);
   p += sprintf(p, "\"sharpness\":%d,", s->status.sharpness);
+  p += sprintf(p, "\"denoise\":%u,", s->status.denoise);
   p += sprintf(p, "\"special_effect\":%u,", s->status.special_effect);
   p += sprintf(p, "\"wb_mode\":%u,", s->status.wb_mode);
   p += sprintf(p, "\"awb\":%u,", s->status.awb);
@@ -468,7 +423,7 @@ static esp_err_t status_handler(httpd_req_t *req) {
   p += sprintf(p, "\"aec_value\":%u,", s->status.aec_value);
   p += sprintf(p, "\"agc\":%u,", s->status.agc);
   p += sprintf(p, "\"agc_gain\":%u,", s->status.agc_gain);
-  p += sprintf(p, "\"gainceiling\":%u,", s->status.gainceiling);
+  p += sprintf(p, "\"gainceiling\":%u,", cameraSettingsValue("gainceiling", s->status.gainceiling));
   p += sprintf(p, "\"bpc\":%u,", s->status.bpc);
   p += sprintf(p, "\"wpc\":%u,", s->status.wpc);
   p += sprintf(p, "\"raw_gma\":%u,", s->status.raw_gma);
@@ -652,6 +607,7 @@ static esp_err_t win_handler(httpd_req_t *req) {
 static esp_err_t index_handler(httpd_req_t *req) {
   httpd_resp_set_type(req, "text/html");
   httpd_resp_set_hdr(req, "Content-Encoding", "gzip");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
   sensor_t *s = esp_camera_sensor_get();
   if (s != NULL) {
     if (s->id.PID == OV3660_PID) {
@@ -665,6 +621,41 @@ static esp_err_t index_handler(httpd_req_t *req) {
     log_e("Camera sensor not found");
     return httpd_resp_send_500(req);
   }
+}
+
+static esp_err_t settings_response(httpd_req_t *req, esp_err_t result, const char *success) {
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  if (result != ESP_OK) {
+    httpd_resp_set_status(req, "500 Internal Server Error");
+    return httpd_resp_sendstr(req, "{\"message\":\"Settings could not be saved or restored. Try again; do not unplug yet.\"}");
+  }
+  char response[192];
+  snprintf(response, sizeof(response), "{\"message\":\"%s\"}", success);
+  return httpd_resp_sendstr(req, response);
+}
+
+static esp_err_t settings_status_handler(httpd_req_t *req) {
+  char response[96];
+  snprintf(response, sizeof(response), "{\"saved\":%s,\"max_framesize\":%d}",
+           cameraSettingsHaveSavedProfile() ? "true" : "false", cameraSettingsMaxFramesize());
+  httpd_resp_set_type(req, "application/json");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  return httpd_resp_sendstr(req, response);
+}
+
+static esp_err_t settings_save_handler(httpd_req_t *req) {
+  return settings_response(req, cameraSettingsSave(), "Settings saved on the camera. They will return after unplugging.");
+}
+
+static esp_err_t settings_defaults_handler(httpd_req_t *req) {
+  return settings_response(req, cameraSettingsRestoreDefaults(), "Defaults restored. The saved profile has been cleared.");
+}
+
+static esp_err_t settings_script_handler(httpd_req_t *req) {
+  httpd_resp_set_type(req, "application/javascript");
+  httpd_resp_set_hdr(req, "Cache-Control", "no-store");
+  return httpd_resp_send(req, camera_settings_js, sizeof(camera_settings_js) - 1);
 }
 
 void startCameraServer() {
@@ -814,6 +805,23 @@ void startCameraServer() {
 #endif
   };
 
+  httpd_uri_t settings_uri = {};
+  settings_uri.uri = "/settings";
+  settings_uri.method = HTTP_GET;
+  settings_uri.handler = settings_status_handler;
+  httpd_uri_t save_settings_uri = {};
+  save_settings_uri.uri = "/settings/save";
+  save_settings_uri.method = HTTP_POST;
+  save_settings_uri.handler = settings_save_handler;
+  httpd_uri_t defaults_uri = {};
+  defaults_uri.uri = "/settings/defaults";
+  defaults_uri.method = HTTP_POST;
+  defaults_uri.handler = settings_defaults_handler;
+  httpd_uri_t settings_script_uri = {};
+  settings_script_uri.uri = "/camera_settings.js";
+  settings_script_uri.method = HTTP_GET;
+  settings_script_uri.handler = settings_script_handler;
+
   ra_filter_init(&ra_filter, 20);
 
   log_i("Starting web server on port: '%d'", config.server_port);
@@ -829,6 +837,10 @@ void startCameraServer() {
     httpd_register_uri_handler(camera_httpd, &greg_uri);
     httpd_register_uri_handler(camera_httpd, &pll_uri);
     httpd_register_uri_handler(camera_httpd, &win_uri);
+    httpd_register_uri_handler(camera_httpd, &settings_uri);
+    httpd_register_uri_handler(camera_httpd, &save_settings_uri);
+    httpd_register_uri_handler(camera_httpd, &defaults_uri);
+    httpd_register_uri_handler(camera_httpd, &settings_script_uri);
   }
 
   config.server_port += 1;

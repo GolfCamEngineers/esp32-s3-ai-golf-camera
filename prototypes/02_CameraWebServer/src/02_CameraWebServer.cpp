@@ -6,6 +6,7 @@
 // ===========================
 #include "board_config.h"
 #include "io_extension.h"
+#include "camera_settings.h"
 
 #include "WiFiCredentials.h"
 
@@ -22,7 +23,7 @@ void setup() {
   IO_EXTENSION_Init();
   IO_EXTENSION_Output(IO_EXTENSION_IO_6, 1);
 
-  camera_config_t config;
+  camera_config_t config = {};
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
   config.pin_d0 = Y2_GPIO_NUM;
@@ -78,7 +79,15 @@ void setup() {
     Serial.printf("Camera init failed with error 0x%x", err);
     config.frame_size = FRAMESIZE_QVGA;
     config.pixel_format = PIXFORMAT_RGB565;
-    esp_camera_init(&config);
+    err = esp_camera_init(&config);
+  }
+
+  if (err == ESP_OK) {
+    esp_err_t settings = cameraSettingsBegin();
+    if (settings == ESP_OK) Serial.println("Saved camera settings restored");
+    else if (settings != ESP_ERR_NOT_FOUND) {
+      Serial.printf("Saved camera settings could not be restored: %s\n", esp_err_to_name(settings));
+    }
   }
 
   WiFi.begin(ssid, password);
