@@ -19,7 +19,7 @@ async function page(fetch) {
   };
   element('menu').prepend = () => {};
   element('menu').querySelectorAll = () => [element('save-settings'), element('restore-settings'), element('quality')];
-  element('framesize').options = [{value:'6'}, {value:'10'}];
+  element('framesize').options = [{value:'6'}, {value:'10'}, {value:'23'}, {value:'24'}];
   const location = {href:'http://camera/', origin:'http://camera', reload() { location.reloaded = true; }};
   const context = {
     URL, window: {fetch}, location,
@@ -79,4 +79,12 @@ test('Storage failure is visible and leaves the buttons usable for retry', async
   assert.equal(p.element('settings-message').textContent, 'Storage failed');
   assert.equal(p.element('save-settings').disabled, false);
   assert.equal(p.element('restore-settings').disabled, false);
+});
+
+test('PSRAM enables larger resolutions while options beyond its limit stay disabled', async () => {
+  const p = await page(async () => reply(true, {saved:true, max_framesize:23}));
+  const options = p.element('framesize').options;
+  for (const option of options.slice(0, 3)) assert.notEqual(option.disabled, true);
+  assert.equal(options[3].disabled, true);
+  assert.equal(p.element('save-settings').disabled, false);
 });
