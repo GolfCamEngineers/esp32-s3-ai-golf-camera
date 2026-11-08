@@ -356,7 +356,7 @@ static esp_err_t cmd_handler(httpd_req_t *req) {
     result = cameraSettingsSet(variable, val);
   }
   if (result == ESP_ERR_INVALID_ARG || result == ESP_ERR_NOT_FOUND) {
-    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Unsupported setting or value. This build supports QVGA (320x240) and smaller.");
+    return httpd_resp_send_err(req, HTTPD_400_BAD_REQUEST, "Unsupported setting or value. Choose a resolution enabled in the menu.");
   }
   if (result != ESP_OK) return httpd_resp_send_500(req);
 

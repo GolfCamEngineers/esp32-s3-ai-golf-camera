@@ -22,11 +22,18 @@ saturation, sharpness, denoise, exposure, gain, white balance, image correction,
 effects, mirror and flip. Advanced clock, PLL, window and direct register
 settings are temporary and are not part of the saved profile.
 
-This build allocates its camera buffer for **QVGA (320 x 240)**. Larger
-resolutions are disabled in the menu and rejected by `/control`; enabling them
-requires a separate buffer configuration change and capture tests. The setting
-store validates its version, sensor and value ranges before applying a profile.
-Writes happen only when Save Settings or Restore Defaults is clicked.
+When PSRAM is available, this build allocates two JPEG buffers for up to
+**QSXGA (2560 x 1920)** and uses the latest frames for streaming. It then selects
+QVGA as the unsaved startup default and restores any saved profile. Allocating
+the buffers before restoring the resolution lets larger saved images work
+after a restart. The sensor may limit the maximum resolution further.
+
+Without PSRAM, or if the larger initialization fails, the camera uses one
+internal-memory JPEG buffer and limits the menu and `/control` to QVGA
+(320 x 240). `/settings` reports the active limit as `max_framesize`.
+The setting store validates its version, sensor, value ranges and allocated
+buffer limit before applying a profile. Writes happen only when Save Settings
+or Restore Defaults is clicked.
 
 ### Developing and checking the settings controls
 
@@ -35,11 +42,33 @@ regenerate the embedded script and vendor page headers. Generation is
 repeatable and preserves the vendor pages apart from the added script tag.
 
 Run `node --test test/settings_ui.test.cjs` and `pio run` before upload.
-On hardware, verify Save confirmation, reject a resolution above QVGA, restart
-the camera and compare `/status`, check a still capture, then verify Restore
+On hardware, verify Save confirmation, reject a resolution above the active
+buffer limit, restart the camera and compare `/status`, check a still capture,
+then verify Restore
 Defaults clears `/settings`'s `saved` flag. Save the desired profile again after
 testing. The settings API is `GET /settings`, `POST /settings/save`, and
 `POST /settings/defaults`.
+
+### Comparing resolutions
+
+Close other live streams and keep the same scene, lighting and network during
+the comparison. Install Pillow (`python -m pip install Pillow`), then run:
+
+```text
+python tools/benchmark_camera.py http://CAMERA_ADDRESS --output PRIVATE_OUTPUT_FOLDER
+```
+
+The script measures received MJPEG frame rate, fully decodes every JPEG,
+checks its dimensions, and saves a sample and JSON results for each resolution.
+It discards five warm-up frames per setting and measures ten seconds by
+default. It restores the previous temporary resolution and quality afterward;
+it never overwrites the saved profile. Samples may show private surroundings,
+so keep the output folder outside the repository. The stream's static
+`X-Framerate` header is not a measured frame rate. Indoor streaming results do
+not establish outdoor ball-detection accuracy or motion-blur performance.
+
+See the [indoor hardware comparison](docs/resolution-comparison-2026-11-08.md)
+for measured results on the OV5640 board.
 
 # Build Environment
 

@@ -24,7 +24,7 @@ struct Control {
 
 const Control kControls[] = {
   {"framesize", [](const sensor_t *s) -> int { return s->status.framesize; },
-   [](sensor_t *s, int v) -> int { return s->set_framesize(s, static_cast<framesize_t>(v)); }, 0, FRAMESIZE_QVGA},
+   [](sensor_t *s, int v) -> int { return s->set_framesize(s, static_cast<framesize_t>(v)); }, 0, FRAMESIZE_QSXGA},
   CONTROL("quality", quality, set_quality, 4, 63),
   CONTROL("brightness", brightness, set_brightness, -3, 3),
   CONTROL("contrast", contrast, set_contrast, -3, 3),
@@ -65,13 +65,14 @@ Profile current = {};
 Profile defaults = {};
 bool ready = false;
 bool saved = false;
+int maximumFramesize = FRAMESIZE_QVGA;
 
 bool valid(const Profile &profile) {
   if (profile.version != kVersion || profile.sensor != defaults.sensor) return false;
   for (size_t i = 0; i < kControlCount; ++i) {
     if (profile.values[i] < kControls[i].minimum || profile.values[i] > kControls[i].maximum) return false;
   }
-  return profile.values[0] <= defaults.values[0];
+  return profile.values[0] <= maximumFramesize;
 }
 
 esp_err_t apply(const Profile &profile) {
@@ -97,9 +98,11 @@ esp_err_t apply(const Profile &profile) {
 }
 }  // namespace
 
-esp_err_t cameraSettingsBegin() {
+esp_err_t cameraSettingsBegin(framesize_t bufferLimit) {
   sensor_t *sensor = esp_camera_sensor_get();
   if (!sensor) return ESP_ERR_INVALID_STATE;
+  if (bufferLimit < FRAMESIZE_QVGA || bufferLimit > FRAMESIZE_QSXGA) return ESP_ERR_INVALID_ARG;
+  maximumFramesize = bufferLimit;
   current.version = kVersion;
   current.sensor = sensor->id.PID;
   for (size_t i = 0; i < kControlCount; ++i) current.values[i] = kControls[i].read(sensor);
@@ -125,7 +128,7 @@ esp_err_t cameraSettingsSet(const char *name, int value) {
   for (size_t i = 0; i < kControlCount; ++i) {
     if (strcmp(name, kControls[i].name)) continue;
     if (value < kControls[i].minimum || value > kControls[i].maximum
-        || (i == 0 && value > defaults.values[0])) return ESP_ERR_INVALID_ARG;
+        || (i == 0 && value > maximumFramesize)) return ESP_ERR_INVALID_ARG;
     sensor_t *sensor = esp_camera_sensor_get();
     if (!sensor) return ESP_ERR_INVALID_STATE;
     if (kControls[i].write(sensor, value) < 0) return ESP_FAIL;
@@ -172,4 +175,4 @@ esp_err_t cameraSettingsRestoreDefaults() {
 }
 
 bool cameraSettingsHaveSavedProfile() { return saved; }
-int cameraSettingsMaxFramesize() { return ready ? defaults.values[0] : FRAMESIZE_QVGA; }
+int cameraSettingsMaxFramesize() { return maximumFramesize; }

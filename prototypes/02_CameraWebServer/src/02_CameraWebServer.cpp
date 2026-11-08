@@ -50,44 +50,46 @@ void setup() {
   config.fb_location = CAMERA_FB_IN_DRAM;
   config.jpeg_quality = 12;
   config.fb_count = 1;
-
-//   // if PSRAM IC present, init with UXGA resolution and higher JPEG quality
-//   //                      for larger pre-allocated frame buffer.
-//   if (config.pixel_format == PIXFORMAT_JPEG) {
-//     if (psramFound()) {
-//       config.jpeg_quality = 10;
-//       config.fb_count = 2;
-//       config.grab_mode = CAMERA_GRAB_LATEST;
-//     } else {
-//       // Limit the frame size when PSRAM is not available
-//       config.frame_size = FRAMESIZE_SVGA;
-//       config.fb_location = CAMERA_FB_IN_DRAM;
-//     }
-//   } else {
-//     // Best option for face detection/recognition
-//     config.frame_size = FRAMESIZE_240X240;
-// #if CONFIG_IDF_TARGET_ESP32S3
-//     config.fb_count = 2;
-// #endif
-//   }
-
+  if (psramFound()) {
+    // Allocate for the largest offered image before selecting the startup
+    // resolution. Changing a sensor resolution later does not resize buffers.
+    config.frame_size = FRAMESIZE_QSXGA;
+    config.fb_location = CAMERA_FB_IN_PSRAM;
+    config.fb_count = 2;
+    config.grab_mode = CAMERA_GRAB_LATEST;
+  }
 
   // camera init
   esp_err_t err = esp_camera_init(&config);
   if (err != ESP_OK) {
     esp_camera_deinit();
-    Serial.printf("Camera init failed with error 0x%x", err);
+    Serial.printf("Camera init failed with error 0x%x; trying the QVGA buffer\n", err);
     config.frame_size = FRAMESIZE_QVGA;
-    config.pixel_format = PIXFORMAT_RGB565;
+    config.fb_location = CAMERA_FB_IN_DRAM;
+    config.fb_count = 1;
+    config.grab_mode = CAMERA_GRAB_WHEN_EMPTY;
     err = esp_camera_init(&config);
   }
 
   if (err == ESP_OK) {
-    esp_err_t settings = cameraSettingsBegin();
+    sensor_t *sensor = esp_camera_sensor_get();
+    // The driver may clamp the requested size for a different sensor model.
+    framesize_t bufferLimit = sensor->status.framesize;
+    if (sensor->set_framesize(sensor, FRAMESIZE_QVGA) < 0) {
+      Serial.println("Could not select the safe startup resolution");
+      return;
+    }
+    Serial.printf("Camera buffers: %s, count %u, maximum frame size %d, PSRAM %u bytes\n",
+                  config.fb_location == CAMERA_FB_IN_PSRAM ? "PSRAM" : "internal RAM",
+                  config.fb_count, bufferLimit, ESP.getPsramSize());
+    esp_err_t settings = cameraSettingsBegin(bufferLimit);
     if (settings == ESP_OK) Serial.println("Saved camera settings restored");
     else if (settings != ESP_ERR_NOT_FOUND) {
       Serial.printf("Saved camera settings could not be restored: %s\n", esp_err_to_name(settings));
     }
+  } else {
+    Serial.printf("Camera initialization failed: %s\n", esp_err_to_name(err));
+    return;
   }
 
   WiFi.begin(ssid, password);
