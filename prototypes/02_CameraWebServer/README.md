@@ -70,6 +70,20 @@ not establish outdoor ball-detection accuracy or motion-blur performance.
 See the [indoor hardware comparison](docs/resolution-comparison-2026-11-08.md)
 for measured results on the OV5640 board.
 
+For faster streaming at the same **800 x 600** dimensions, the indoor
+[JPEG quality comparison](docs/svga-fps-comparison-2026-11-08.md) selected
+**Quality 24**: 15.75 FPS in a 45-second validation versus 12.21 FPS with
+Quality 12 in a subsequent control run. Higher Quality numbers on this camera
+mean more compression and less fine detail. Choose the desired quality and
+click **Save Settings** to retain it. Outdoor ball visibility still needs
+validation.
+
+To repeat a fixed-resolution quality test:
+
+```text
+python tools/benchmark_camera.py http://CAMERA_ADDRESS --sizes 11 --quality 24 --seconds 45 --output PRIVATE_OUTPUT_FOLDER
+```
+
 # Build Environment
 
 ## Visual Studio Code (VS Code)
