@@ -19,7 +19,7 @@ PlatformIO allows you to build, upload, and monitor Arduino/ESP32 projects direc
 
 The PlatformIO toolbar appears in the VS Code bottom toolbar and provides quick access to commonly used commands. Hover your mouse over any button to see its description.
 
-![PlatformIO Toolbar](README_Images/image-1.png)
+![PlatformIO Toolbar](images/image-1.png)
 
 ### Build
 
@@ -45,7 +45,7 @@ The PlatformIO toolbar appears in the VS Code bottom toolbar and provides quick 
 
 1. Start the PlatformIO Serial Monitor by clicking the **plug icon pointing upward** on the toolbar.
 
-   ![PlatformIO Serial Monitor](README_Images/image.png)
+   ![PlatformIO Serial Monitor](images/image.png)
 
 2. Connect the camera to your laptop.
 3. Watch the Serial Monitor for a message similar to:

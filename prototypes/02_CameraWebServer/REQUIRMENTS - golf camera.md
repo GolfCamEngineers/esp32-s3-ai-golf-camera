@@ -1,6 +1,6 @@
 # ESP32-S3 AI Golf Camera: Coding Requirements
 
-<img src="Target and Balls.png" alt="Golf Target and Balls" style="width:400px;"/>
+<img src="images/Target and Balls.png" alt="Golf Target and Balls" style="width:400px;"/>
 
 ## 1. Project Overview
 
