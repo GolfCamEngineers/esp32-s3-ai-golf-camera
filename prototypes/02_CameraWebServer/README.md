@@ -5,6 +5,42 @@ This example uses the Waveshare ESP32-S3-CAM-OVxxxx camera sample code from thei
 
 - [Waveshare CameraWebServer Example](https://github.com/waveshareteam/ESP32-S3-CAM-OVxxxx/tree/main/examples/Arduino-v3.2.0/examples/02_CameraWebServer)
 
+## Save camera settings
+
+The web page has **Save Settings** and **Restore Defaults** buttons above the
+image controls. Adjust the picture, click **Save Settings**, and wait for the
+confirmation before disconnecting power. The saved image controls are loaded
+from the camera's flash memory on the next startup, regardless of which browser
+or computer is used. Slider changes remain temporary until explicitly saved.
+
+**Restore Defaults** applies the camera's startup image controls and clears the
+saved profile. Wi-Fi credentials and the firmware are not changed. The page
+reloads afterward; click **Start Stream** again to resume viewing.
+
+Saved controls include resolution, JPEG quality, brightness, contrast,
+saturation, sharpness, denoise, exposure, gain, white balance, image correction,
+effects, mirror and flip. Advanced clock, PLL, window and direct register
+settings are temporary and are not part of the saved profile.
+
+This build allocates its camera buffer for **QVGA (320 x 240)**. Larger
+resolutions are disabled in the menu and rejected by `/control`; enabling them
+requires a separate buffer configuration change and capture tests. The setting
+store validates its version, sensor and value ranges before applying a profile.
+Writes happen only when Save Settings or Restore Defaults is clicked.
+
+### Developing and checking the settings controls
+
+Edit `web/camera_settings.js`, then run `python tools/build_camera_ui.py` to
+regenerate the embedded script and vendor page headers. Generation is
+repeatable and preserves the vendor pages apart from the added script tag.
+
+Run `node --test test/settings_ui.test.cjs` and `pio run` before upload.
+On hardware, verify Save confirmation, reject a resolution above QVGA, restart
+the camera and compare `/status`, check a still capture, then verify Restore
+Defaults clears `/settings`'s `saved` flag. Save the desired profile again after
+testing. The settings API is `GET /settings`, `POST /settings/save`, and
+`POST /settings/defaults`.
+
 # Build Environment
 
 ## Visual Studio Code (VS Code)
